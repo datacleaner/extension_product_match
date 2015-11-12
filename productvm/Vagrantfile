@@ -112,8 +112,6 @@ Vagrant.configure(2) do |config|
     echo Downloading DataCleaner
     wget -q -O datacleaner.tar.gz http://sourceforge.net/projects/datacleaner/files/datacleaner%20%28stable%29/4.5/DataCleaner-all.tar.gz/download
     tar xvf datacleaner.tar.gz
-    mkdir -p .datacleaner/4.5/extensions
-    cp /vagrant/datacleaner/DataCleaner-elasticsearch-2.9.jar ~/.datacleaner/4.5/extensions
   SHELL
   
   # Copy POD data to ElasticSearch using DataCleaner
