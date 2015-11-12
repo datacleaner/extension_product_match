@@ -169,7 +169,11 @@ public class ProductMatchTransformer implements Transformer {
         if (value == null) {
             return null;
         }
-        return value.toString();
+        final String string = value.toString().trim();
+        if (string.isEmpty()) {
+            return null;
+        }
+        return string;
     }
 
 }
