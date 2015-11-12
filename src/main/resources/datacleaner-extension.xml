@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension xmlns="http://eobjects.org/datacleaner/extension/1.0">
+	<name>Product Matching</name>
+	<description>Identify the various commerial products by their name or by GTIN-13 code</description>
+	<package>org.datacleaner.extension.productmatch</package>
+	<icon>org/datacleaner/extension/productmatch/</icon>
+</extension>
