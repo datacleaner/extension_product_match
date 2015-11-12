@@ -179,7 +179,16 @@ public class ProductMatchTransformer implements Transformer {
                     return result;
                 } else {
                     // some fields should be compared
-
+                    final String matchResult = getMatchVerdict(input, lookupResult);
+                    switch (matchResult) {
+                    case MATCH_STATUS_GOOD:
+                    case MATCH_STATUS_POTENTIAL:
+                        // OK the lookup seems at least potential - we'll return
+                        // this
+                        applySearchHitToResult(lookupResult, result);
+                        result[0] = matchResult;
+                        return result;
+                    }
                 }
             }
         }
@@ -199,9 +208,15 @@ public class ProductMatchTransformer implements Transformer {
             return result;
         }
 
-        result[0] = MATCH_STATUS_GOOD;
+        result[0] = getMatchVerdict(input, matchResult);
         applySearchHitToResult(matchResult, result);
         return result;
+    }
+
+    private String getMatchVerdict(final Map<ProductFieldType, String> input,
+            final Map<ProductFieldType, String> searchResult) {
+        // TODO: compare input and search result
+        return MATCH_STATUS_GOOD;
     }
 
     protected static String normalizeGtinCode(String gtin) {
