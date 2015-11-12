@@ -25,11 +25,11 @@ public class ProductMatchTransformerTest {
 
         Object[] result = transformer.transform(new MockInputRow().put(column, "Coca-cola"));
         assertEquals(
-                "[7894900011517, Coca Cola 2 litros||Refrigerantes | COCA COLA 2 LTRS, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
+                "[GOOD_MATCH, 7894900011517, Coca Cola 2 litros||Refrigerantes | COCA COLA 2 LTRS, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
                 Arrays.toString(result));
 
         result = transformer.transform(new MockInputRow().put(column, "Coca cola zero 1 liter"));
-        assertEquals("[7894900701753, COCA COLA ZERO 1,, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
+        assertEquals("[GOOD_MATCH, 7894900701753, COCA COLA ZERO 1,, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
                 Arrays.toString(result));
     }
 
@@ -46,7 +46,7 @@ public class ProductMatchTransformerTest {
         transformer.init();
 
         Object[] result = transformer.transform(new MockInputRow().put(column, "helloworldabracadabra"));
-        assertEquals("[null, null, null, null, null, null, null, null]", Arrays.toString(result));
+        assertEquals("[NO_MATCH, null, null, null, null, null, null, null, null]", Arrays.toString(result));
     }
 
     @Test
@@ -62,9 +62,9 @@ public class ProductMatchTransformerTest {
         transformer.init();
 
         Object[] result = transformer.transform(new MockInputRow().put(column, ""));
-        assertEquals("[null, null, null, null, null, null, null, null]", Arrays.toString(result));
+        assertEquals("[SKIPPED, null, null, null, null, null, null, null, null]", Arrays.toString(result));
         
         result = transformer.transform(new MockInputRow().put(column, null));
-        assertEquals("[null, null, null, null, null, null, null, null]", Arrays.toString(result));
+        assertEquals("[SKIPPED, null, null, null, null, null, null, null, null]", Arrays.toString(result));
     }
 }
