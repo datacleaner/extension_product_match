@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import org.datacleaner.api.InputColumn;
 import org.datacleaner.data.MockInputColumn;
 import org.datacleaner.data.MockInputRow;
-import org.datacleaner.extension.productmatch.ProductMatchTransformer.InputField;
 import org.junit.Test;
 
 import cern.colt.Arrays;
@@ -117,18 +116,18 @@ public class ProductMatchTransformerTest {
     private ProductMatchTransformer createTransformer(InputColumn<?>... columns) {
         final ProductMatchTransformer transformer = new ProductMatchTransformer();
 
-        final InputField[] inputFields = new ProductMatchTransformer.InputField[columns.length];
+        final ProductInputField[] inputFields = new ProductInputField[columns.length];
         for (int i = 0; i < inputFields.length; i++) {
-            final InputField inputField;
+            final ProductInputField inputField;
             final InputColumn<?> column = columns[i];
             if (column == product) {
-                inputField = InputField.PRODUCT_NAME;
+                inputField = ProductInputField.PRODUCT_NAME;
             } else if (column == brand) {
-                inputField = InputField.BRAND_NAME;
+                inputField = ProductInputField.BRAND_NAME;
             } else if (column == gtin) {
-                inputField = InputField.GTIN_CODE;
+                inputField = ProductInputField.GTIN_CODE;
             } else {
-                inputField = InputField.PRODUCT_DESCRIPTION_TEXT;
+                inputField = ProductInputField.PRODUCT_DESCRIPTION_TEXT;
             }
             inputFields[i] = inputField;
         }

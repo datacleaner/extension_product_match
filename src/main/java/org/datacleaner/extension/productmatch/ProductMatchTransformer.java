@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.metamodel.elasticsearch.ElasticSearchDataContext;
-import org.apache.metamodel.util.HasName;
 import org.datacleaner.api.Categorized;
 import org.datacleaner.api.Configured;
 import org.datacleaner.api.Description;
@@ -70,126 +69,12 @@ public class ProductMatchTransformer implements Transformer {
     public static final String MATCH_STATUS_NO_MATCH = "NO_MATCH";
     public static final String MATCH_STATUS_SKIPPED = "SKIPPED";
 
-    /**
-     * Represents all fields in the search index
-     */
-    public static enum SearchField {
-        // pseudo-fields
-        SCORE, ALL,
-
-        // product related
-        GTIN_NM, GTIN_CD,
-
-        // measures
-        PKG_UNIT, M_G, M_OZ, M_ML, M_FLOZ,
-
-        // brand related
-        BRAND_NM, BRAND_LINK, BSIN,
-
-        // category related
-        GPC_SEGMENT, GPC_FAMILY, GPC_CLASS, GPC_BRICK,
-
-        // contact related
-        GLN_NM, GLN_ADDR_02, GLN_ADDR_03, GLN_ADDR_04, GLN_ADDR_POSTALCODE, GLN_ADDR_CITY, GLN_COUNTRY_ISO_CD;
-
-        public String getFieldName() {
-            if (this == SCORE) {
-                throw new UnsupportedOperationException();
-            }
-            if (this == ALL) {
-                return "_all";
-            }
-            return name();
-        }
-
-        public boolean isPseudoField() {
-            return this == SCORE || this == ALL;
-        }
-    }
-
-    public static enum InputField implements HasName {
-
-        PRODUCT_DESCRIPTION_TEXT("Product description", SearchField.ALL),
-
-        PRODUCT_NAME("Product name", SearchField.GTIN_NM),
-
-        BRAND_NAME("Brand name", SearchField.BRAND_NM),
-
-        GTIN_CODE("GTIN code", SearchField.GTIN_CD),
-
-        BSIN_CODE("BSIN code", SearchField.BSIN),;
-
-        private final String _name;
-        private final SearchField _searchField;
-
-        private InputField(String name, SearchField searchField) {
-            _name = name;
-            _searchField = searchField;
-        }
-
-        @Override
-        public String getName() {
-            return _name;
-        }
-
-        public SearchField getSearchField() {
-            return _searchField;
-        }
-    }
-
-    public static enum OutputField implements HasName {
-        MATCH_STATUS("Match status", null),
-
-        MATCH_SCORE("Match score", SearchField.SCORE, Number.class),
-
-        GTIN_CODE("GTIN code", SearchField.GTIN_CD),
-
-        PRODUCT_NAME("Product name", SearchField.GTIN_NM),
-
-        BRAND_NAME("Brand name", SearchField.BRAND_NM),
-
-        BSIN_CODE("BSIN code", SearchField.BSIN),
-
-        GPC_SEGMENT("GPC segment", SearchField.GPC_SEGMENT),
-
-        GPC_FAMILY("GPC family", SearchField.GPC_FAMILY), GPC_CLASS("GPC class", SearchField.GPC_CLASS),
-
-        GPC_BRICK("GPC brick", SearchField.GPC_BRICK);
-
-        private final String _name;
-        private final SearchField _searchField;
-        private final Class<?> _dataType;
-
-        private OutputField(String name, SearchField searchField) {
-            this(name, searchField, String.class);
-        }
-
-        private OutputField(String name, SearchField searchField, Class<?> dataType) {
-            _name = name;
-            _searchField = searchField;
-            _dataType = dataType;
-        }
-
-        public Class<?> getDataType() {
-            return _dataType;
-        }
-
-        @Override
-        public String getName() {
-            return _name;
-        }
-
-        public SearchField getSearchField() {
-            return _searchField;
-        }
-    }
-
     @Configured(value = "Input")
     InputColumn<?>[] inputColumns;
 
     @Configured
     @MappedProperty("Input")
-    InputField[] inputMapping;
+    ProductInputField[] inputMapping;
 
     ElasticSearchDatastore datastore;
 
@@ -203,11 +88,11 @@ public class ProductMatchTransformer implements Transformer {
 
     @Override
     public OutputColumns getOutputColumns() {
-        final OutputField[] outputFields = OutputField.values();
+        final ProductOutputField[] outputFields = ProductOutputField.values();
         final List<String> columnNames = new ArrayList<>(outputFields.length);
         final List<Class<?>> classes = new ArrayList<>(outputFields.length);
 
-        for (OutputField fieldType : outputFields) {
+        for (ProductOutputField fieldType : outputFields) {
             columnNames.add(fieldType.getName());
             classes.add(fieldType.getDataType());
         }
@@ -218,7 +103,7 @@ public class ProductMatchTransformer implements Transformer {
 
     @Override
     public Object[] transform(InputRow row) {
-        final Map<SearchField, Object> input = createInputMap(row);
+        final Map<ProductSearchField, Object> input = createInputMap(row);
         try (UpdateableDatastoreConnection connection = datastore.openConnection()) {
             final ElasticSearchDataContext dataContext = (ElasticSearchDataContext) connection.getDataContext();
             final Client client = dataContext.getElasticSearchClient();
@@ -227,8 +112,8 @@ public class ProductMatchTransformer implements Transformer {
         }
     }
 
-    protected Object[] transform(Map<SearchField, Object> input, Client client) {
-        final Object[] result = new Object[OutputField.values().length];
+    protected Object[] transform(Map<ProductSearchField, Object> input, Client client) {
+        final Object[] result = new Object[ProductOutputField.values().length];
 
         // ensure that input=output, when no match is found
         applySearchHitToResult(input, result);
@@ -238,13 +123,13 @@ public class ProductMatchTransformer implements Transformer {
             return result;
         }
 
-        final String gtinCode = normalizeGtinCode(input.get(SearchField.GTIN_CD));
+        final String gtinCode = normalizeGtinCode(input.get(ProductSearchField.GTIN_CD));
         if (gtinCode != null) {
             // look up product based on GTIN code
             final SearchRequestBuilder lookup = client.prepareSearch("pod").setTypes("product")
                     .setSearchType(SearchType.QUERY_AND_FETCH)
-                    .setQuery(QueryBuilders.termQuery(SearchField.GTIN_CD.getFieldName(), gtinCode));
-            final Map<SearchField, Object> lookupResult = executeSearch(lookup);
+                    .setQuery(QueryBuilders.termQuery(ProductSearchField.GTIN_CD.getFieldName(), gtinCode));
+            final Map<ProductSearchField, Object> lookupResult = executeSearch(lookup);
 
             if (lookupResult != null) {
 
@@ -291,7 +176,7 @@ public class ProductMatchTransformer implements Transformer {
         final SearchRequestBuilder search = client.prepareSearch("pod").setTypes("product")
                 .setSearchType(SearchType.QUERY_AND_FETCH).setQuery(finalQueryBuilder);
 
-        final Map<SearchField, Object> matchResult = executeSearch(search);
+        final Map<ProductSearchField, Object> matchResult = executeSearch(search);
         if (matchResult == null) {
             result[0] = MATCH_STATUS_NO_MATCH;
             return result;
@@ -302,12 +187,12 @@ public class ProductMatchTransformer implements Transformer {
         return result;
     }
 
-    private List<QueryBuilder> createQueryBuilders(Map<SearchField, Object> input) {
+    private List<QueryBuilder> createQueryBuilders(Map<ProductSearchField, Object> input) {
         final List<QueryBuilder> queryBuilders = new ArrayList<>();
 
-        final MatchQueryBuilder productNameQuery = addMatchQueryBuilder(queryBuilders, input, SearchField.GTIN_NM);
-        final MatchQueryBuilder brandNameQuery = addMatchQueryBuilder(queryBuilders, input, SearchField.BRAND_NM);
-        final MatchQueryBuilder descriptionQuery = addMatchQueryBuilder(queryBuilders, input, SearchField.ALL, "_all");
+        final MatchQueryBuilder productNameQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.GTIN_NM);
+        final MatchQueryBuilder brandNameQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.BRAND_NM);
+        final MatchQueryBuilder descriptionQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.ALL, "_all");
 
         // some tweaks
         if (descriptionQuery != null) {
@@ -325,13 +210,13 @@ public class ProductMatchTransformer implements Transformer {
         return queryBuilders;
     }
 
-    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders, Map<SearchField, Object> input,
-            SearchField type) {
+    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductSearchField, Object> input,
+            ProductSearchField type) {
         return addMatchQueryBuilder(queryBuilders, input, type, type.getFieldName());
     }
 
-    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders, Map<SearchField, Object> input,
-            SearchField type, String fieldName) {
+    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductSearchField, Object> input,
+            ProductSearchField type, String fieldName) {
         final Object value = input.get(type);
         if (value != null) {
             final MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(fieldName, value);
@@ -341,7 +226,7 @@ public class ProductMatchTransformer implements Transformer {
         return null;
     }
 
-    private String getMatchVerdict(final Map<SearchField, Object> input, final Map<SearchField, Object> searchResult) {
+    private String getMatchVerdict(final Map<ProductSearchField, Object> input, final Map<ProductSearchField, Object> searchResult) {
 
         // TODO: compare input and search result
         return MATCH_STATUS_GOOD;
@@ -363,10 +248,10 @@ public class ProductMatchTransformer implements Transformer {
         }
     }
 
-    private void applySearchHitToResult(Map<SearchField, Object> searchResult, Object[] result) {
-        final OutputField[] outputFields = OutputField.values();
+    private void applySearchHitToResult(Map<ProductSearchField, Object> searchResult, Object[] result) {
+        final ProductOutputField[] outputFields = ProductOutputField.values();
         for (int i = 0; i < outputFields.length; i++) {
-            final SearchField searchField = outputFields[i].getSearchField();
+            final ProductSearchField searchField = outputFields[i].getSearchField();
             if (searchField != null) {
                 final Object value = searchResult.get(searchField);
                 result[i] = value;
@@ -374,7 +259,7 @@ public class ProductMatchTransformer implements Transformer {
         }
     }
 
-    private Map<SearchField, Object> executeSearch(SearchRequestBuilder search) {
+    private Map<ProductSearchField, Object> executeSearch(SearchRequestBuilder search) {
         final SearchResponse searchResponse = search.setSize(1).execute().actionGet();
 
         final SearchHits hits = searchResponse.getHits();
@@ -382,17 +267,17 @@ public class ProductMatchTransformer implements Transformer {
             return null;
         }
 
-        final Map<SearchField, Object> searchResult = new EnumMap<>(SearchField.class);
+        final Map<ProductSearchField, Object> searchResult = new EnumMap<>(ProductSearchField.class);
 
         final SearchHit hit = hits.getAt(0);
 
         final float score = hit.getScore();
-        searchResult.put(SearchField.SCORE, score);
+        searchResult.put(ProductSearchField.SCORE, score);
 
         final Map<String, Object> sourceAsMap = hit.sourceAsMap();
-        final SearchField[] searchFields = SearchField.values();
+        final ProductSearchField[] searchFields = ProductSearchField.values();
         for (int i = 0; i < searchFields.length; i++) {
-            final SearchField searchField = searchFields[i];
+            final ProductSearchField searchField = searchFields[i];
             if (!searchField.isPseudoField()) {
                 final Object value = sourceAsMap.get(searchField.getFieldName());
                 searchResult.put(searchField, value);
@@ -402,8 +287,8 @@ public class ProductMatchTransformer implements Transformer {
         return searchResult;
     }
 
-    private Map<SearchField, Object> createInputMap(InputRow row) {
-        final Map<SearchField, Object> map = new EnumMap<>(SearchField.class);
+    private Map<ProductSearchField, Object> createInputMap(InputRow row) {
+        final Map<ProductSearchField, Object> map = new EnumMap<>(ProductSearchField.class);
         for (int i = 0; i < inputColumns.length; i++) {
             final Object value = row.getValue(inputColumns[i]);
             if (value instanceof String && ((String) value).trim().isEmpty()) {
@@ -411,8 +296,8 @@ public class ProductMatchTransformer implements Transformer {
                 continue;
             }
             if (value != null) {
-                final InputField fieldType = inputMapping[i];
-                final SearchField searchField = fieldType.getSearchField();
+                final ProductInputField fieldType = inputMapping[i];
+                final ProductSearchField searchField = fieldType.getSearchField();
                 final Object existingValue = map.get(searchField);
                 if (existingValue == null) {
                     map.put(searchField, value);
