@@ -33,7 +33,7 @@ import org.datacleaner.components.categories.ReferenceDataCategory;
 @javax.inject.Named(value="Product Matching")
 @org.datacleaner.api.Description(value="Identify the various commerial products by their name or by GTIN-13 code")
 @Categorized(superCategory = ImproveSuperCategory.class, value = ReferenceDataCategory.class)
-public class ProductMathTransformer  implements Transformer {
+public class ProductMatchTransformer  implements Transformer {
     
     public static enum ProductEnum {
         PRODUCT_NAME,
