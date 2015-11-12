@@ -32,33 +32,44 @@ Vagrant.configure(2) do |config|
   # Download POD data
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     POD_DATA_FILE=pod_web_2014.01.01_01.sql.gz
-    if [ -e /vagrant/download_cache/$POD_DATA_FILE ];
-    then 
-		echo Copying POD data from the host
-		cp /vagrant/download_cache/$POD_DATA_FILE ~
+    if [ -e /home/vagrant/$POD_DATA_FILE ];
+    then
+      echo POD data already available
     else
+    if [ -e /vagrant/download_cache/$POD_DATA_FILE ];
+      then 
+        echo Copying POD data from the host
+        cp /vagrant/download_cache/$POD_DATA_FILE ~
+      else
         echo Downloading POD data
         wget -q http://www.product-open-data.com/docs/$POD_DATA_FILE
         echo Caching POD data at the host
         rsync -a $POD_DATA_FILE /vagrant/download_cache/
+      fi
+      gzip -d $POD_DATA_FILE
     fi
-    
-    gzip -d $POD_DATA_FILE
   SHELL
   
   # Install MYSQL
   config.vm.provision "shell", privileged: true, inline: <<-SHELL
-    debconf-set-selections <<< 'mysql-server mysql-server/root_password password vagrant'
-    debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password vagrant'
-    echo Installing MySQL
-    apt-get install -y mysql-server > /dev/null
+  	if [ -e /etc/init.d/mysql ];
+    then
+      echo MySQL already installed
+    else
+      debconf-set-selections <<< 'mysql-server mysql-server/root_password password vagrant'
+      debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password vagrant'
+      echo Installing MySQL
+      apt-get install -y mysql-server > /dev/null
+    fi
   SHELL
   
   # Create POD database
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
-    POD_DATA_FILE=pod_web_2014.01.01_01.sql
+    echo Creating POD database in MySQL
     echo "create database pod" | mysql --password=vagrant
-    echo "source /home/vagrant/$POD_DATA_FILE" | mysql --password=vagrant pod
+    echo Importing POD data into MySQL
+    POD_DATA_FILE=pod_web_2014.01.01_01.sql
+    echo "source /home/vagrant/$POD_DATA_FILE" | mysql --user=root --password=vagrant pod
   SHELL
   
   # Download ElasticSearch
