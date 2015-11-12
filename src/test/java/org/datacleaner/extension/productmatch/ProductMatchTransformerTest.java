@@ -28,4 +28,20 @@ public class ProductMatchTransformerTest {
         result = transformer.transform(new MockInputRow().put(column, "Coca cola zero 1 liter"));
         assertEquals("[7894900701753, COCA COLA ZERO 1,, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]", Arrays.toString(result));
     }
+    
+
+    @Test
+    public void testNoMatch() throws Exception {
+        final ProductMatchTransformer transformer = new ProductMatchTransformer();
+
+        MockInputColumn<String> column = new MockInputColumn<>("product");
+
+        transformer.inputColumns = new InputColumn[] { column };
+        transformer.inputMapping = new ProductMatchTransformer.ProductFieldTypes[] {ProductMatchTransformer.ProductFieldTypes.PRODUCT_DESCRIPTION_TEXT};
+        
+        transformer.init();
+        
+        Object[] result = transformer.transform(new MockInputRow().put(column, "helloworldabracadabra"));
+        assertEquals("[null, null, null, null, null, null, null, null]", Arrays.toString(result));
+    }
 }
