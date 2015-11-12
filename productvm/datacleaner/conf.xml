@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration xmlns="http://eobjects.org/analyzerbeans/configuration/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+	<datastore-catalog>
+
+		<elasticsearch-datastore name="pod_es">
+			<hostname>localhost</hostname>
+			<port>9300</port>
+			<cluster-name>listiqkasperslaptop</cluster-name>
+			<index-name>pod</index-name>
+			<ssl>false</ssl>
+		</elasticsearch-datastore>
+
+		<jdbc-datastore name="pod">
+			<url>jdbc:mysql://localhost:3306/pod??defaultFetchSize=-2147483648&amp;largeRowSizeThreshold=1024</url>
+			<driver>com.mysql.jdbc.Driver</driver>
+			<username>root</username>
+			<password>enc:ZumXHNZXBFlo+GB6qse/yA==</password>
+			<multiple-connections>false</multiple-connections>
+		</jdbc-datastore>
+
+	</datastore-catalog>
+
+	<multithreaded-taskrunner max-threads="30" />
+
+	<storage-provider>
+		<combined>
+			<collections-storage>
+				<berkeley-db>
+					<clean-directory-on-startup>true</clean-directory-on-startup>
+				</berkeley-db>
+			</collections-storage>
+			<row-annotation-storage>
+				<in-memory max-rows-threshold="500" max-sets-threshold="500" />
+			</row-annotation-storage>
+		</combined>
+	</storage-provider>
+
+	<classpath-scanner>
+		<package recursive="true">org.datacleaner</package>
+		<package recursive="true">com.hi</package>
+		<package recursive="true">com.neopost</package>
+	</classpath-scanner>
+
+</configuration>

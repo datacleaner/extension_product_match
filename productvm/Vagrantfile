@@ -1,0 +1,93 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "ubuntu/trusty64"
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  config.vm.network "private_network", ip: "192.168.33.10"
+  
+  config.vm.hostname = "productvm"
+
+  config.vm.provider "virtualbox" do |vb|
+    # Display the VirtualBox GUI when booting the machine
+    vb.gui = false
+	
+	# Set the VirtualBox VM name equal to the hostname
+	vb.name = config.vm.hostname.to_s
+
+    # Customize the amount of memory on the VM:
+    vb.memory = "2048"
+  end
+
+  # OpenJDK
+  config.vm.provision "shell", privileged: true, inline: <<-SHELL
+    echo Updating apt repository
+    apt-get update -y > /dev/null
+    echo Installing OpenJDK 7
+    apt-get install -y openjdk-7-jdk > /dev/null
+  SHELL
+  
+  # Download POD data
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    POD_DATA_FILE=pod_web_2014.01.01_01.sql.gz
+    if [ -e /vagrant/download_cache/$POD_DATA_FILE ];
+    then 
+		echo Copying POD data from the host
+		cp /vagrant/download_cache/$POD_DATA_FILE ~
+    else
+        echo Downloading POD data
+        wget -q http://www.product-open-data.com/docs/$POD_DATA_FILE
+        echo Caching POD data at the host
+        rsync -a $POD_DATA_FILE /vagrant/download_cache/
+    fi
+    
+    gzip -d $POD_DATA_FILE
+  SHELL
+  
+  # Install MYSQL
+  config.vm.provision "shell", privileged: true, inline: <<-SHELL
+    debconf-set-selections <<< 'mysql-server mysql-server/root_password password vagrant'
+    debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password vagrant'
+    echo Installing MySQL
+    apt-get install -y mysql-server > /dev/null
+  SHELL
+  
+  # Create POD database
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    POD_DATA_FILE=pod_web_2014.01.01_01.sql
+    echo "create database pod" | mysql --password=vagrant
+    echo "source /home/vagrant/$POD_DATA_FILE" | mysql --password=vagrant pod
+  SHELL
+  
+  # Download ElasticSearch
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    echo Downloading ElasticSearch
+    ELASTICSEARCH_NAME=elasticsearch-1.7.3
+    if [ -e /vagrant/download_cache/$ELASTICSEARCH_NAME.tar.gz ];
+    then 
+		echo Copying ElasticSearch from the host
+		cp /vagrant/download_cache/$ELASTICSEARCH_NAME.tar.gz ~
+    else
+        echo Downloading ElasticSearch
+        wget -q wget https://download.elastic.co/elasticsearch/elasticsearch/$ELASTICSEARCH_NAME.tar.gz
+        echo Caching ElasticSearch at the host
+        rsync -a $ELASTICSEARCH_NAME.tar.gz /vagrant/download_cache/
+    fi
+    
+    tar -xvf $ELASTICSEARCH_NAME.tar.gz
+    cp /vagrant/elasticsearch/elasticsearch.yml $ELASTICSEARCH_NAME/config
+  SHELL
+  
+  # Start ElasticSearch
+  config.vm.provision "shell", privileged: false, run: "always", inline: <<-SHELL
+  	ELASTICSEARCH_NAME=elasticsearch-1.7.3
+  	
+  	echo Starting ElasticSearch
+    exec $ELASTICSEARCH_NAME/bin/elasticsearch -d
+    
+    echo Creating ElasticSearch index 'pod'
+    curl -XPUT 'http://localhost:9200/pod/'
+  SHELL
+end

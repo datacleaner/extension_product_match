@@ -1,0 +1,6 @@
+/.project
+/.classpath
+.settings/
+target/
+.vagrant/
+/productvm/download_cache

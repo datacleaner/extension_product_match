@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<job xmlns="http://eobjects.org/analyzerbeans/job/1.0">
+    <job-metadata>
+        <job-description>Created with DataCleaner Enterprise edition 4.5.1</job-description>
+        <metadata-properties>
+            <property name="CoordinatesX.pod.gtin">65</property>
+            <property name="CoordinatesY.pod.gtin">159</property>
+        </metadata-properties>
+    </job-metadata>
+    <source>
+        <data-context ref="pod"/>
+        <columns>
+            <column id="col_gtin_cd" path="pod.gtin.GTIN_CD" type="VARCHAR"/>
+            <column id="col_gcp_cd" path="pod.gtin.GCP_CD" type="VARCHAR"/>
+            <column id="col_bsin" path="pod.gtin.BSIN" type="VARCHAR"/>
+            <column id="col_gpc_s_cd" path="pod.gtin.GPC_S_CD" type="VARCHAR"/>
+            <column id="col_gpc_f_cd" path="pod.gtin.GPC_F_CD" type="VARCHAR"/>
+            <column id="col_gpc_c_cd" path="pod.gtin.GPC_C_CD" type="VARCHAR"/>
+            <column id="col_gpc_b_cd" path="pod.gtin.GPC_B_CD" type="VARCHAR"/>
+            <column id="col_gtin_nm" path="pod.gtin.GTIN_NM" type="VARCHAR"/>
+            <column id="col_product_line" path="pod.gtin.PRODUCT_LINE" type="VARCHAR"/>
+            <column id="col_m_g" path="pod.gtin.M_G" type="REAL"/>
+            <column id="col_m_oz" path="pod.gtin.M_OZ" type="REAL"/>
+            <column id="col_m_ml" path="pod.gtin.M_ML" type="REAL"/>
+            <column id="col_m_floz" path="pod.gtin.M_FLOZ" type="REAL"/>
+            <column id="col_m_abv" path="pod.gtin.M_ABV" type="REAL"/>
+            <column id="col_m_abw" path="pod.gtin.M_ABW" type="REAL"/>
+            <column id="col_pkg_unit" path="pod.gtin.PKG_UNIT" type="INTEGER"/>
+        </columns>
+    </source>
+    <transformation>
+        <transformer>
+            <descriptor ref="Table lookup"/>
+            <metadata-properties>
+                <property name="CoordinatesY">348</property>
+                <property name="CoordinatesX">313</property>
+            </metadata-properties>
+            <properties>
+                <property name="Cache lookups" value="true"/>
+                <property name="Condition columns" value="[BSIN]"/>
+                <property name="Datastore" value="pod"/>
+                <property name="Join semantic" value="LEFT_JOIN_MAX_ONE"/>
+                <property name="Output columns" value="[BRAND_NM,BRAND_LINK]"/>
+                <property name="Schema name" value="pod"/>
+                <property name="Table name" value="brand"/>
+            </properties>
+            <input ref="col_bsin"/>
+            <output id="col_brand_nm" name="BRAND_NM"/>
+            <output id="col_brand_link" name="BRAND_LINK"/>
+        </transformer>
+        <transformer>
+            <descriptor ref="Table lookup"/>
+            <metadata-properties>
+                <property name="CoordinatesY">143</property>
+                <property name="CoordinatesX">447</property>
+            </metadata-properties>
+            <properties>
+                <property name="Cache lookups" value="false"/>
+                <property name="Condition columns" value="[GCP_CD]"/>
+                <property name="Datastore" value="pod"/>
+                <property name="Join semantic" value="LEFT_JOIN_MAX_ONE"/>
+                <property name="Output columns" value="[GLN_NM,GLN_ADDR_02,GLN_ADDR_03,GLN_ADDR_04,GLN_ADDR_POSTALCODE,GLN_ADDR_CITY,GLN_COUNTRY_ISO_CD]"/>
+                <property name="Schema name" value="pod"/>
+                <property name="Table name" value="gs1_gcp"/>
+            </properties>
+            <input ref="col_gcp_cd"/>
+            <output id="col_gln_nm" name="GLN_NM"/>
+            <output id="col_gln_addr_02" name="GLN_ADDR_02"/>
+            <output id="col_gln_addr_03" name="GLN_ADDR_03"/>
+            <output id="col_gln_addr_04" name="GLN_ADDR_04"/>
+            <output id="col_gln_addr_postalcode" name="GLN_ADDR_POSTALCODE"/>
+            <output id="col_gln_addr_city" name="GLN_ADDR_CITY"/>
+            <output id="col_gln_country_iso_cd" name="GLN_COUNTRY_ISO_CD"/>
+        </transformer>
+        <transformer name="Get GPC segment">
+            <descriptor ref="Table lookup"/>
+            <metadata-properties>
+                <property name="CoordinatesY">488</property>
+                <property name="CoordinatesX">314</property>
+            </metadata-properties>
+            <properties>
+                <property name="Cache lookups" value="true"/>
+                <property name="Condition columns" value="[GPC_CD,GPC_LANG]"/>
+                <property name="Datastore" value="pod"/>
+                <property name="Join semantic" value="LEFT_JOIN_MAX_ONE"/>
+                <property name="Output columns" value="[GPC_NM]"/>
+                <property name="Schema name" value="pod"/>
+                <property name="Table name" value="gs1_gpc"/>
+            </properties>
+            <input ref="col_gpc_s_cd"/>
+            <input ref="col_gpc_lang"/>
+            <output id="col_gpc_segment" name="GPC_SEGMENT"/>
+        </transformer>
+        <transformer name="Select GPC language">
+            <descriptor ref="JavaScript transformer (simple)"/>
+            <metadata-properties>
+                <property name="CoordinatesY">375</property>
+                <property name="CoordinatesX">119</property>
+            </metadata-properties>
+            <properties>
+                <property name="Return type" value="STRING"/>
+                <property name="Source code" value="&amp;quot;EN&amp;quot;;"/>
+            </properties>
+            <input ref="col_gtin_cd"/>
+            <output id="col_gpc_lang" name="GPC_LANG"/>
+        </transformer>
+        <transformer name="Get GPC family">
+            <descriptor ref="Table lookup"/>
+            <metadata-properties>
+                <property name="CoordinatesY">556</property>
+                <property name="CoordinatesX">280</property>
+            </metadata-properties>
+            <properties>
+                <property name="Cache lookups" value="true"/>
+                <property name="Condition columns" value="[GPC_CD,GPC_LANG]"/>
+                <property name="Datastore" value="pod"/>
+                <property name="Join semantic" value="LEFT_JOIN_MAX_ONE"/>
+                <property name="Output columns" value="[GPC_NM]"/>
+                <property name="Schema name" value="pod"/>
+                <property name="Table name" value="gs1_gpc"/>
+            </properties>
+            <input ref="col_gpc_f_cd"/>
+            <input ref="col_gpc_lang"/>
+            <output id="col_gpc_family" name="GPC_FAMILY"/>
+        </transformer>
+        <transformer name="Get GPC class">
+            <descriptor ref="Table lookup"/>
+            <metadata-properties>
+                <property name="CoordinatesY">629</property>
+                <property name="CoordinatesX">245</property>
+            </metadata-properties>
+            <properties>
+                <property name="Cache lookups" value="false"/>
+                <property name="Condition columns" value="[GPC_CD,GPC_LANG]"/>
+                <property name="Datastore" value="pod"/>
+                <property name="Join semantic" value="LEFT_JOIN_MAX_ONE"/>
+                <property name="Output columns" value="[GPC_NM]"/>
+                <property name="Schema name" value="pod"/>
+                <property name="Table name" value="gs1_gpc"/>
+            </properties>
+            <input ref="col_gpc_c_cd"/>
+            <input ref="col_gpc_lang"/>
+            <output id="col_gpc_class" name="GPC_CLASS"/>
+        </transformer>
+        <transformer name="Get GPC brick">
+            <descriptor ref="Table lookup"/>
+            <metadata-properties>
+                <property name="CoordinatesY">709</property>
+                <property name="CoordinatesX">231</property>
+            </metadata-properties>
+            <properties>
+                <property name="Cache lookups" value="false"/>
+                <property name="Condition columns" value="[GPC_CD,GPC_LANG]"/>
+                <property name="Datastore" value="pod"/>
+                <property name="Join semantic" value="LEFT_JOIN_MAX_ONE"/>
+                <property name="Output columns" value="[GPC_NM]"/>
+                <property name="Schema name" value="pod"/>
+                <property name="Table name" value="gs1_gpc"/>
+            </properties>
+            <input ref="col_gpc_b_cd"/>
+            <input ref="col_gpc_lang"/>
+            <output id="col_gpc_brick" name="GPC_BRICK"/>
+        </transformer>
+    </transformation>
+    <analysis>
+        <analyzer>
+            <descriptor ref="ElasticSearch indexer"/>
+            <metadata-properties>
+                <property name="CoordinatesY">464</property>
+                <property name="CoordinatesX">833</property>
+            </metadata-properties>
+            <properties>
+                <property name="ElasticSearch index" value="pod_es"/>
+                <property name="Document type" value="product"/>
+                <property name="Automatic date detection" value="false"/>
+                <property name="Bulk index size" value="10000"/>
+                <property name="Fields" value="[GTIN_CD,BSIN,GTIN_NM,PRODUCT_LINE,M_G,M_OZ,M_ML,M_FLOZ,M_ABV,M_ABW,PKG_UNIT,PKG_TYPE_CD,REF_CD,SOURCE,IMG,BRAND_NM,BRAND_LINK,GLN_NM,GLN_ADDR_02,GLN_ADDR_03,GLN_ADDR_04,GLN_ADDR_POSTALCODE,GLN_ADDR_CITY,GLN_COUNTRY_ISO_CD,GPC_SEGMENT,GPC_FAMILY,GPC_CLASS,GPC_BRICK]"/>
+            </properties>
+            <input ref="col_gtin_cd" name="Id column"/>
+            <input ref="col_gtin_cd" name="Values"/>
+            <input ref="col_gcp_cd" name="Values"/>
+            <input ref="col_bsin" name="Values"/>
+            <input ref="col_gpc_s_cd" name="Values"/>
+            <input ref="col_gpc_f_cd" name="Values"/>
+            <input ref="col_gpc_c_cd" name="Values"/>
+            <input ref="col_gpc_b_cd" name="Values"/>
+            <input ref="col_gtin_nm" name="Values"/>
+            <input ref="col_product_line" name="Values"/>
+            <input ref="col_m_g" name="Values"/>
+            <input ref="col_m_oz" name="Values"/>
+            <input ref="col_m_ml" name="Values"/>
+            <input ref="col_m_floz" name="Values"/>
+            <input ref="col_m_abv" name="Values"/>
+            <input ref="col_m_abw" name="Values"/>
+            <input ref="col_pkg_unit" name="Values"/>
+            <input ref="col_brand_nm" name="Values"/>
+            <input ref="col_brand_link" name="Values"/>
+            <input ref="col_gln_nm" name="Values"/>
+            <input ref="col_gln_addr_02" name="Values"/>
+            <input ref="col_gln_addr_03" name="Values"/>
+            <input ref="col_gln_addr_04" name="Values"/>
+            <input ref="col_gln_addr_postalcode" name="Values"/>
+            <input ref="col_gln_addr_city" name="Values"/>
+            <input ref="col_gln_country_iso_cd" name="Values"/>
+            <input ref="col_gpc_segment" name="Values"/>
+            <input ref="col_gpc_family" name="Values"/>
+            <input ref="col_gpc_class" name="Values"/>
+        </analyzer>
+    </analysis>
+</job>
