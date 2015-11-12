@@ -117,7 +117,6 @@ Vagrant.configure(2) do |config|
   # Copy POD data to ElasticSearch using DataCleaner
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     echo Starting DataCleaner job to copy POD data to ElasticSearch
-    java -cp DataCleaner/DataCleaner.jar:/vagrant/datacleaner/DataCleaner-elasticsearch-2.9.jar org.datacleaner.Main -conf /vagrant/datacleaner/conf.xml -job /vagran
-t/datacleaner/pod_move_to_es.analysis.xml
+    java -cp DataCleaner/DataCleaner.jar:/vagrant/datacleaner/DataCleaner-elasticsearch-2.9.jar org.datacleaner.Main -conf /vagrant/datacleaner/conf.xml -job /vagrant/datacleaner/pod_move_to_es.analysis.xml
   SHELL
 end
