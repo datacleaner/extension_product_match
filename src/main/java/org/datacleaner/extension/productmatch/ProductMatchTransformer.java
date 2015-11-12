@@ -199,10 +199,7 @@ public class ProductMatchTransformer implements Transformer {
             }
         }
 
-        final List<QueryBuilder> queryBuilders = new ArrayList<>();
-        addQueryBuilder(queryBuilders, input, ProductFieldType.PRODUCT_NAME);
-        addQueryBuilder(queryBuilders, input, ProductFieldType.BRAND_NAME);
-        addQueryBuilder(queryBuilders, input, ProductFieldType.PRODUCT_DESCRIPTION_TEXT, "_all");
+        final List<QueryBuilder> queryBuilders = createQueryBuilders(input);
 
         if (queryBuilders.isEmpty()) {
             result[0] = MATCH_STATUS_SKIPPED;
@@ -234,18 +231,46 @@ public class ProductMatchTransformer implements Transformer {
         return result;
     }
 
-    private void addQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductFieldType, String> input,
-            ProductFieldType type) {
-        addQueryBuilder(queryBuilders, input, type, type.getFieldName());
+    private List<QueryBuilder> createQueryBuilders(Map<ProductFieldType, String> input) {
+        final List<QueryBuilder> queryBuilders = new ArrayList<>();
+
+        final MatchQueryBuilder productNameQuery = addMatchQueryBuilder(queryBuilders, input,
+                ProductFieldType.PRODUCT_NAME);
+        final MatchQueryBuilder brandNameQuery = addMatchQueryBuilder(queryBuilders, input,
+                ProductFieldType.BRAND_NAME);
+        final MatchQueryBuilder descriptionQuery = addMatchQueryBuilder(queryBuilders, input,
+                ProductFieldType.PRODUCT_DESCRIPTION_TEXT, "_all");
+
+        // some tweaks
+        if (descriptionQuery != null) {
+            // description is there
+            if (productNameQuery != null) {
+                // boost product name a bit
+                productNameQuery.boost(2.5f);
+            }
+            if (brandNameQuery != null) {
+                // boost brand name a bit
+                brandNameQuery.boost(2);
+            }
+        }
+
+        return queryBuilders;
     }
 
-    private void addQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductFieldType, String> input,
-            ProductFieldType type, String fieldName) {
+    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders,
+            Map<ProductFieldType, String> input, ProductFieldType type) {
+        return addMatchQueryBuilder(queryBuilders, input, type, type.getFieldName());
+    }
+
+    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders,
+            Map<ProductFieldType, String> input, ProductFieldType type, String fieldName) {
         final String description = input.get(type);
         if (description != null) {
             final MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(fieldName, description);
             queryBuilders.add(queryBuilder);
+            return queryBuilder;
         }
+        return null;
     }
 
     private String getMatchVerdict(final Map<ProductFieldType, String> input,
