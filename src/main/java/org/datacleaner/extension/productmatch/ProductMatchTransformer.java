@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.lucene.search.TermQuery;
-import org.apache.metamodel.DataContext;
 import org.apache.metamodel.elasticsearch.ElasticSearchDataContext;
 import org.apache.metamodel.util.HasName;
 import org.datacleaner.api.Categorized;
@@ -41,13 +39,12 @@ import org.datacleaner.components.categories.ReferenceDataCategory;
 import org.datacleaner.connection.ElasticSearchDatastore;
 import org.datacleaner.connection.ElasticSearchDatastore.ClientType;
 import org.datacleaner.connection.UpdateableDatastoreConnection;
-import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHitField;
+import org.elasticsearch.search.SearchHits;
 
 @javax.inject.Named(value = "Product Matching")
 @org.datacleaner.api.Description(value = "Identify the various commerial products by their name or by GTIN-13 code")
@@ -145,15 +142,24 @@ public class ProductMatchTransformer implements Transformer {
         }
 
         final SearchResponse searchResult = client.prepareSearch("pod").setTypes("product")
-                .setSearchType(SearchType.DEFAULT).setQuery(QueryBuilders.simpleQueryString(query)).setSize(1)
-                .execute().actionGet();
-        final SearchHit hit = searchResult.getHits().getHits()[0];
-
-        for (int i = 0; i < inputMapping.length; i++) {
-            final Map<String, SearchHitField> fields = hit.getFields();
-            final SearchHitField value = hit.field(inputMapping[i].getFieldName());
-            String id = hit.id();
-            result[i] = value.getValue();
+                .setSearchType(SearchType.QUERY_AND_FETCH).setQuery(QueryBuilders.matchQuery("_all", query)).setSize(1).execute()
+                .actionGet();
+        
+        final SearchHits hits = searchResult.getHits();
+        if (hits.getTotalHits() == 0) {
+            // TODO: Return a "non match" record
+            return result;
+        }
+        
+        final SearchHit hit = hits.getAt(0);
+        
+        for (int i = 0; i < fieldTypes.length; i++) {
+            final Map<String, Object> map = hit.sourceAsMap();
+            final String fieldName = fieldTypes[i].getFieldName();
+            if (fieldName != null) {
+                final Object value = map.get(fieldName);
+                result[i] = value;
+            }
         }
         return result;
     }
