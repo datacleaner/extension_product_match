@@ -45,6 +45,9 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MatchQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -156,6 +159,9 @@ public class ProductMatchTransformer implements Transformer {
     protected Object[] transform(Map<ProductFieldType, String> input, Client client) {
         final Object[] result = new Object[1 + OUTPUT_FIELD_TYPES.length];
 
+        // ensure that input=output, when no match is found
+        applySearchHitToResult(input, result);
+
         if (input.isEmpty()) {
             result[0] = MATCH_STATUS_SKIPPED;
             return result;
@@ -193,14 +199,29 @@ public class ProductMatchTransformer implements Transformer {
             }
         }
 
-        final String description = input.get(ProductFieldType.PRODUCT_DESCRIPTION_TEXT);
-        if (description == null) {
+        final List<QueryBuilder> queryBuilders = new ArrayList<>();
+        addQueryBuilder(queryBuilders, input, ProductFieldType.PRODUCT_NAME);
+        addQueryBuilder(queryBuilders, input, ProductFieldType.BRAND_NAME);
+        addQueryBuilder(queryBuilders, input, ProductFieldType.PRODUCT_DESCRIPTION_TEXT, "_all");
+
+        if (queryBuilders.isEmpty()) {
             result[0] = MATCH_STATUS_SKIPPED;
             return result;
         }
 
+        final QueryBuilder finalQueryBuilder;
+        if (queryBuilders.size() == 1) {
+            finalQueryBuilder = queryBuilders.get(0);
+        } else {
+            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+            for (QueryBuilder childQueryBuilder : queryBuilders) {
+                boolQuery = boolQuery.should(childQueryBuilder);
+            }
+            finalQueryBuilder = boolQuery;
+        }
+
         final SearchRequestBuilder search = client.prepareSearch("pod").setTypes("product")
-                .setSearchType(SearchType.QUERY_AND_FETCH).setQuery(QueryBuilders.matchQuery("_all", description));
+                .setSearchType(SearchType.QUERY_AND_FETCH).setQuery(finalQueryBuilder);
 
         final Map<ProductFieldType, String> matchResult = executeSearch(search);
         if (matchResult == null) {
@@ -213,8 +234,23 @@ public class ProductMatchTransformer implements Transformer {
         return result;
     }
 
+    private void addQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductFieldType, String> input,
+            ProductFieldType type) {
+        addQueryBuilder(queryBuilders, input, type, type.getFieldName());
+    }
+
+    private void addQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductFieldType, String> input,
+            ProductFieldType type, String fieldName) {
+        final String description = input.get(type);
+        if (description != null) {
+            final MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(fieldName, description);
+            queryBuilders.add(queryBuilder);
+        }
+    }
+
     private String getMatchVerdict(final Map<ProductFieldType, String> input,
             final Map<ProductFieldType, String> searchResult) {
+
         // TODO: compare input and search result
         return MATCH_STATUS_GOOD;
     }
