@@ -6,7 +6,7 @@
 		<elasticsearch-datastore name="pod_es">
 			<hostname>localhost</hostname>
 			<port>9300</port>
-			<cluster-name>listiqkasperslaptop</cluster-name>
+			<cluster-name>pod</cluster-name>
 			<index-name>pod</index-name>
 			<ssl>false</ssl>
 		</elasticsearch-datastore>
@@ -15,7 +15,7 @@
 			<url>jdbc:mysql://localhost:3306/pod??defaultFetchSize=-2147483648&amp;largeRowSizeThreshold=1024</url>
 			<driver>com.mysql.jdbc.Driver</driver>
 			<username>root</username>
-			<password>enc:ZumXHNZXBFlo+GB6qse/yA==</password>
+			<password>vagrant</password>
 			<multiple-connections>false</multiple-connections>
 		</jdbc-datastore>
 

@@ -86,8 +86,29 @@ Vagrant.configure(2) do |config|
   	
   	echo Starting ElasticSearch
     exec $ELASTICSEARCH_NAME/bin/elasticsearch -d
-    
+  SHELL
+  
+  # Create ElasticSearch index
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    echo Sleeping for 2 seconds to give ElasticSearch time to start up
+    sleep 2
     echo Creating ElasticSearch index 'pod'
     curl -XPUT 'http://localhost:9200/pod/'
+  SHELL
+  
+  # Install DataCleaner
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    echo Downloading DataCleaner
+    wget -q -O datacleaner.tar.gz http://sourceforge.net/projects/datacleaner/files/datacleaner%20%28stable%29/4.5/DataCleaner-all.tar.gz/download
+    tar xvf datacleaner.tar.gz
+    mkdir -p .datacleaner/4.5/extensions
+    cp /vagrant/datacleaner/DataCleaner-elasticsearch-2.9.jar ~/.datacleaner/4.5/extensions
+  SHELL
+  
+  # Copy POD data to ElasticSearch using DataCleaner
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    echo Starting DataCleaner job to copy POD data to ElasticSearch
+    java -cp DataCleaner/DataCleaner.jar:/vagrant/datacleaner/DataCleaner-elasticsearch-2.9.jar org.datacleaner.Main -conf /vagrant/datacleaner/conf.xml -job /vagran
+t/datacleaner/pod_move_to_es.analysis.xml
   SHELL
 end
