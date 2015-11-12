@@ -90,6 +90,11 @@ public class ProductMatchTransformer implements Transformer {
         }
     }
 
+    private static final ProductFieldTypes[] OUTPUT_FIELD_TYPES = { ProductFieldTypes.GTIN_CODE,
+            ProductFieldTypes.PRODUCT_NAME, ProductFieldTypes.BRAND_NAME, ProductFieldTypes.BSIN_CODE,
+            ProductFieldTypes.GPC_SEGMENT, ProductFieldTypes.GPC_FAMILY, ProductFieldTypes.GPC_CLASS,
+            ProductFieldTypes.GPC_BRICK };
+
     @Configured(value = "Input")
     InputColumn<?>[] inputColumns;
 
@@ -111,8 +116,7 @@ public class ProductMatchTransformer implements Transformer {
     public OutputColumns getOutputColumns() {
         final List<String> columnNames = new ArrayList<>();
 
-        final ProductFieldTypes[] fieldTypes = ProductFieldTypes.values();
-        for (ProductFieldTypes fieldType : fieldTypes) {
+        for (ProductFieldTypes fieldType : OUTPUT_FIELD_TYPES) {
             columnNames.add(fieldType.getName());
         }
 
@@ -130,8 +134,7 @@ public class ProductMatchTransformer implements Transformer {
     }
 
     protected Object[] transform(InputRow row, Client client) {
-        final ProductFieldTypes[] fieldTypes = ProductFieldTypes.values();
-        final Object[] result = new Object[fieldTypes.length];
+        final Object[] result = new Object[OUTPUT_FIELD_TYPES.length];
 
         // TODO: Take care of mapping
 
@@ -142,24 +145,22 @@ public class ProductMatchTransformer implements Transformer {
         }
 
         final SearchResponse searchResult = client.prepareSearch("pod").setTypes("product")
-                .setSearchType(SearchType.QUERY_AND_FETCH).setQuery(QueryBuilders.matchQuery("_all", query)).setSize(1).execute()
-                .actionGet();
-        
+                .setSearchType(SearchType.QUERY_AND_FETCH).setQuery(QueryBuilders.matchQuery("_all", query)).setSize(1)
+                .execute().actionGet();
+
         final SearchHits hits = searchResult.getHits();
         if (hits.getTotalHits() == 0) {
             // TODO: Return a "non match" record
             return result;
         }
-        
+
         final SearchHit hit = hits.getAt(0);
-        
-        for (int i = 0; i < fieldTypes.length; i++) {
-            final Map<String, Object> map = hit.sourceAsMap();
-            final String fieldName = fieldTypes[i].getFieldName();
-            if (fieldName != null) {
-                final Object value = map.get(fieldName);
-                result[i] = value;
-            }
+
+        final Map<String, Object> map = hit.sourceAsMap();
+        for (int i = 0; i < OUTPUT_FIELD_TYPES.length; i++) {
+            final String fieldName = OUTPUT_FIELD_TYPES[i].getFieldName();
+            final Object value = map.get(fieldName);
+            result[i] = value;
         }
         return result;
     }
