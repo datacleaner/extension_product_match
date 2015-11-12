@@ -71,7 +71,7 @@ Vagrant.configure(2) do |config|
 		cp /vagrant/download_cache/$ELASTICSEARCH_NAME.tar.gz ~
     else
         echo Downloading ElasticSearch
-        wget -q wget https://download.elastic.co/elasticsearch/elasticsearch/$ELASTICSEARCH_NAME.tar.gz
+        wget -q https://download.elastic.co/elasticsearch/elasticsearch/$ELASTICSEARCH_NAME.tar.gz
         echo Caching ElasticSearch at the host
         rsync -a $ELASTICSEARCH_NAME.tar.gz /vagrant/download_cache/
     fi
