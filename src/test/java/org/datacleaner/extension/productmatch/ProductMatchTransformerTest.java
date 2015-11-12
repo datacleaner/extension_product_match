@@ -24,12 +24,12 @@ public class ProductMatchTransformerTest {
         Object[] result = transformer
                 .transform(new MockInputRow().put(description1, "Coca-cola").put(description2, "2"));
         assertEquals(
-                "[GOOD_MATCH, 3.9111848, 7894900011517, Coca Cola 2 litros||Refrigerantes | COCA COLA 2 LTRS, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
+                "[GOOD_MATCH, 7.8549566, 7894900011517, Coca Cola 2 litros||Refrigerantes | COCA COLA 2 LTRS, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
                 Arrays.toString(result));
 
         result = transformer.transform(new MockInputRow().put(description1, "Coca cola zero 1 liter"));
         assertEquals(
-                "[GOOD_MATCH, 2.314582, 7894900701753, COCA COLA ZERO 1,, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
+                "[POTENTIAL_MATCH, 4.9360476, 7894900701753, COCA COLA ZERO 1,, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
                 Arrays.toString(result));
     }
 
@@ -44,9 +44,8 @@ public class ProductMatchTransformerTest {
                 Arrays.toString(result));
 
         result = transformer.transform(new MockInputRow().put(brand, "Coca-cola").put(product, "Life"));
-        // TODO: Should probably not be a GOOD match. Maybe a POTENTIAL match?
         assertEquals(
-                "[GOOD_MATCH, 3.0357375, 0049000000061, Cola With Cherry Flavor, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
+                "[POTENTIAL_MATCH, 3.0357375, 0049000000061, Cola With Cherry Flavor, Coca-Cola, 5MRM4M, Food/Beverage/Tobacco, null, null, null]",
                 Arrays.toString(result));
     }
 
@@ -58,7 +57,19 @@ public class ProductMatchTransformerTest {
                 .transform(new MockInputRow().put(brand, "Lego").put(product, "Star wars destroyer").put(description1,
                         "The elefant-like thing from the Star Wars movies"));
         assertEquals(
-                "[GOOD_MATCH, 8.886115, 0082493500007, Star Wars Imperial Star Destroyer, Lego, GSD9GK, Toys/Games, null, null, null]",
+                "[POTENTIAL_MATCH, 6.065925, 0082493500007, Star Wars Imperial Star Destroyer, Lego, GSD9GK, Toys/Games, null, null, null]",
+                Arrays.toString(result));
+    }
+
+    @Test
+    public void testBadMatchOnProductAndBrandLego() throws Exception {
+        final ProductMatchTransformer transformer = createTransformer(product, brand, description1);
+
+        Object[] result = transformer
+                .transform(new MockInputRow().put(brand, "Lego").put(product, "Hello world").put(description1,
+                        "I am looking for something quite different than this"));
+        assertEquals(
+                "[NO_MATCH, null, null, Hello world, Lego, null, null, null, null, null]",
                 Arrays.toString(result));
     }
 

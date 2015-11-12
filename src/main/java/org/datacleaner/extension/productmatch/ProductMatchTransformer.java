@@ -142,14 +142,14 @@ public class ProductMatchTransformer implements Transformer {
                     return result;
                 } else {
                     // some fields should be compared
-                    final String matchResult = getMatchVerdict(input, lookupResult);
-                    switch (matchResult) {
+                    final String matchVerdict = getMatchVerdict(input, lookupResult);
+                    switch (matchVerdict) {
                     case MATCH_STATUS_GOOD:
                     case MATCH_STATUS_POTENTIAL:
                         // OK the lookup seems at least potential - we'll return
                         // this
                         applySearchHitToResult(lookupResult, result);
-                        result[matchStatusIndex] = matchResult;
+                        result[matchStatusIndex] = matchVerdict;
                         return result;
                     }
                 }
@@ -183,41 +183,53 @@ public class ProductMatchTransformer implements Transformer {
             return result;
         }
 
-        result[matchStatusIndex] = getMatchVerdict(input, matchResult);
-        applySearchHitToResult(matchResult, result);
+        final String matchVerdict = getMatchVerdict(input, matchResult);
+        result[matchStatusIndex] = matchVerdict;
+        switch (matchVerdict) {
+        case MATCH_STATUS_GOOD:
+        case MATCH_STATUS_POTENTIAL:
+            // only proper matches causes update to result
+            applySearchHitToResult(matchResult, result);
+        }
         return result;
     }
 
     private List<QueryBuilder> createQueryBuilders(Map<ProductSearchField, Object> input) {
         final List<QueryBuilder> queryBuilders = new ArrayList<>();
 
-        final MatchQueryBuilder productNameQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.GTIN_NM);
-        final MatchQueryBuilder brandNameQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.BRAND_NM);
-        final MatchQueryBuilder descriptionQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.ALL, "_all");
+        final MatchQueryBuilder productNameQuery = addMatchQueryBuilder(queryBuilders, input,
+                ProductSearchField.GTIN_NM);
+        final MatchQueryBuilder brandNameQuery = addMatchQueryBuilder(queryBuilders, input,
+                ProductSearchField.BRAND_NM);
+        final MatchQueryBuilder descriptionQuery = addMatchQueryBuilder(queryBuilders, input, ProductSearchField.ALL,
+                "_all");
 
-        // some tweaks
         if (descriptionQuery != null) {
             // description is there
-            if (productNameQuery != null) {
-                // boost product name a bit
-                productNameQuery.boost(2.5f);
+
+            if (productNameQuery == null) {
+                // also apply description to "product name"
+                addMatchQueryBuilder(queryBuilders, input, ProductSearchField.ALL,
+                        ProductSearchField.GTIN_NM.getFieldName());
             }
-            if (brandNameQuery != null) {
-                // boost brand name a bit
-                brandNameQuery.boost(2);
+
+            if (brandNameQuery == null) {
+                // also apply description to "brand name"
+                addMatchQueryBuilder(queryBuilders, input, ProductSearchField.ALL,
+                        ProductSearchField.BRAND_NM.getFieldName());
             }
         }
 
         return queryBuilders;
     }
 
-    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductSearchField, Object> input,
-            ProductSearchField type) {
+    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders,
+            Map<ProductSearchField, Object> input, ProductSearchField type) {
         return addMatchQueryBuilder(queryBuilders, input, type, type.getFieldName());
     }
 
-    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders, Map<ProductSearchField, Object> input,
-            ProductSearchField type, String fieldName) {
+    private MatchQueryBuilder addMatchQueryBuilder(List<QueryBuilder> queryBuilders,
+            Map<ProductSearchField, Object> input, ProductSearchField type, String fieldName) {
         final Object value = input.get(type);
         if (value != null) {
             final MatchQueryBuilder queryBuilder = QueryBuilders.matchQuery(fieldName, value);
@@ -227,9 +239,18 @@ public class ProductMatchTransformer implements Transformer {
         return null;
     }
 
-    private String getMatchVerdict(final Map<ProductSearchField, Object> input, final Map<ProductSearchField, Object> searchResult) {
+    private String getMatchVerdict(final Map<ProductSearchField, Object> input,
+            final Map<ProductSearchField, Object> searchResult) {
+        final Number score = (Number) searchResult.get(ProductSearchField.SCORE);
+        if (score != null) {
+            if (score.floatValue() < 3f) {
+                return MATCH_STATUS_NO_MATCH;
+            }
+            if (score.floatValue() < 7f) {
+                return MATCH_STATUS_POTENTIAL;
+            }
+        }
 
-        // TODO: compare input and search result
         return MATCH_STATUS_GOOD;
     }
 
