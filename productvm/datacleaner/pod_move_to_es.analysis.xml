@@ -174,7 +174,7 @@
                 <property name="Document type" value="product"/>
                 <property name="Automatic date detection" value="false"/>
                 <property name="Bulk index size" value="10000"/>
-                <property name="Fields" value="[GTIN_CD,BSIN,GTIN_NM,PRODUCT_LINE,M_G,M_OZ,M_ML,M_FLOZ,M_ABV,M_ABW,PKG_UNIT,PKG_TYPE_CD,REF_CD,SOURCE,IMG,BRAND_NM,BRAND_LINK,GLN_NM,GLN_ADDR_02,GLN_ADDR_03,GLN_ADDR_04,GLN_ADDR_POSTALCODE,GLN_ADDR_CITY,GLN_COUNTRY_ISO_CD,GPC_SEGMENT,GPC_FAMILY,GPC_CLASS,GPC_BRICK]"/>
+                <property name="Fields" value="[GTIN_CD,GCP_CD,BSIN,GPC_S_CD,GPC_F_CD,GPC_C_CD,GPC_B_CD,GTIN_NM,PRODUCT_LINE,M_G,M_OZ,M_ML,M_FLOZ,M_ABV,M_ABW,PKG_UNIT,BRAND_NM,BRAND_LINK,GLN_NM,GLN_ADDR_02,GLN_ADDR_03,GLN_ADDR_04,GLN_ADDR_POSTALCODE,GLN_ADDR_CITY,GLN_COUNTRY_ISO_CD,GPC_SEGMENT,GPC_FAMILY,GPC_CLASS,GPC_BRICK]"/>
             </properties>
             <input ref="col_gtin_cd" name="Id column"/>
             <input ref="col_gtin_cd" name="Values"/>
@@ -205,6 +205,7 @@
             <input ref="col_gpc_segment" name="Values"/>
             <input ref="col_gpc_family" name="Values"/>
             <input ref="col_gpc_class" name="Values"/>
+            <input ref="col_gpc_brick" name="Values"/>
         </analyzer>
     </analysis>
 </job>
