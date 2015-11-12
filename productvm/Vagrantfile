@@ -101,8 +101,8 @@ Vagrant.configure(2) do |config|
   
   # Create ElasticSearch index
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
-    echo Sleeping for 2 seconds to give ElasticSearch time to start up
-    sleep 2
+    echo Sleeping for 8 seconds to give ElasticSearch time to start up
+    sleep 8
     echo Creating ElasticSearch index 'pod'
     curl -XPUT 'http://localhost:9200/pod/'
   SHELL
