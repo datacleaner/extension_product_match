@@ -114,12 +114,13 @@ public class ProductMatchTransformer implements Transformer {
 
     protected Object[] transform(Map<ProductSearchField, Object> input, Client client) {
         final Object[] result = new Object[ProductOutputField.values().length];
+        final int matchStatusIndex = ProductOutputField.MATCH_STATUS.ordinal();
 
         // ensure that input=output, when no match is found
         applySearchHitToResult(input, result);
 
         if (input.isEmpty()) {
-            result[0] = MATCH_STATUS_SKIPPED;
+            result[matchStatusIndex] = MATCH_STATUS_SKIPPED;
             return result;
         }
 
@@ -137,7 +138,7 @@ public class ProductMatchTransformer implements Transformer {
                     // this is a lookup-only scenario, everything is good now
                     // then
                     applySearchHitToResult(lookupResult, result);
-                    result[0] = MATCH_STATUS_GOOD;
+                    result[matchStatusIndex] = MATCH_STATUS_GOOD;
                     return result;
                 } else {
                     // some fields should be compared
@@ -148,7 +149,7 @@ public class ProductMatchTransformer implements Transformer {
                         // OK the lookup seems at least potential - we'll return
                         // this
                         applySearchHitToResult(lookupResult, result);
-                        result[0] = matchResult;
+                        result[matchStatusIndex] = matchResult;
                         return result;
                     }
                 }
@@ -158,7 +159,7 @@ public class ProductMatchTransformer implements Transformer {
         final List<QueryBuilder> queryBuilders = createQueryBuilders(input);
 
         if (queryBuilders.isEmpty()) {
-            result[0] = MATCH_STATUS_SKIPPED;
+            result[matchStatusIndex] = MATCH_STATUS_SKIPPED;
             return result;
         }
 
@@ -178,11 +179,11 @@ public class ProductMatchTransformer implements Transformer {
 
         final Map<ProductSearchField, Object> matchResult = executeSearch(search);
         if (matchResult == null) {
-            result[0] = MATCH_STATUS_NO_MATCH;
+            result[matchStatusIndex] = MATCH_STATUS_NO_MATCH;
             return result;
         }
 
-        result[0] = getMatchVerdict(input, matchResult);
+        result[matchStatusIndex] = getMatchVerdict(input, matchResult);
         applySearchHitToResult(matchResult, result);
         return result;
     }
