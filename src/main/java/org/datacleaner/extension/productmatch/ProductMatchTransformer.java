@@ -21,6 +21,7 @@
 package org.datacleaner.extension.productmatch;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -141,20 +142,21 @@ public class ProductMatchTransformer implements Transformer {
 
     @Override
     public Object[] transform(InputRow row) {
+        final Map<ProductFieldTypes, String> input = createInputMap(row);
         try (UpdateableDatastoreConnection connection = datastore.openConnection()) {
             final ElasticSearchDataContext dataContext = (ElasticSearchDataContext) connection.getDataContext();
             final Client client = dataContext.getElasticSearchClient();
 
-            return transform(row, client);
+            return transform(input, client);
         }
     }
 
-    protected Object[] transform(InputRow row, Client client) {
+    protected Object[] transform(Map<ProductFieldTypes, String> input, Client client) {
         final Object[] result = new Object[1 + OUTPUT_FIELD_TYPES.length];
 
         // TODO: Take care of mapping
 
-        final String query = toString(row.getValue(inputColumns[0]));
+        final String query = input.get(ProductFieldTypes.PRODUCT_DESCRIPTION_TEXT);
         if (query == null) {
             result[0] = MATCH_STATUS_SKIPPED;
             return result;
@@ -180,6 +182,26 @@ public class ProductMatchTransformer implements Transformer {
             result[i + 1] = value;
         }
         return result;
+    }
+
+    private Map<ProductFieldTypes, String> createInputMap(InputRow row) {
+        final Map<ProductFieldTypes, String> map = new EnumMap<>(ProductFieldTypes.class);
+        for (int i = 0; i < inputColumns.length; i++) {
+            final Object value = row.getValue(inputColumns[i]);
+            final String str = toString(value);
+            if (str != null) {
+                final ProductFieldTypes fieldType = inputMapping[i];
+                final String existingValue = map.get(fieldType);
+                if (existingValue == null) {
+                    map.put(fieldType, str);
+                } else {
+                    // append the values if there are more that are mapped to
+                    // the same field type
+                    map.put(fieldType, existingValue + " " + str);
+                }
+            }
+        }
+        return map;
     }
 
     private String toString(Object value) {
