@@ -105,6 +105,14 @@ public class ProductMatchTransformerTest {
         assertEquals(
                 "[GOOD_MATCH, 14.041802, 0300743288131, 1 Er Tablets 1x100 Mfg. Abbott Laboratories 240 mg,1 count, Abbott Laboratories, JLI2V7, Healthcare, null, null, null]",
                 Arrays.toString(result));
+        
+        result = transformer.transform(new MockInputRow().put(gtin, "9999999999999"));
+        assertEquals("[NO_MATCH, null, 9999999999999, null, null, null, null, null, null, null]", Arrays.toString(result));
+        
+        
+        result = transformer.transform(new MockInputRow().put(gtin, "765390-68309"));
+        assertEquals("[GOOD_MATCH, 14.041802, 0076539068309, Bbq Sauce, Naturally Fresh, KYSXQI, null, null, null, null]", Arrays.toString(result));
+      
     }
 
     @Test

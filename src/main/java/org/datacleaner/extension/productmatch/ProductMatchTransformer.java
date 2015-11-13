@@ -192,7 +192,7 @@ public class ProductMatchTransformer implements Transformer, HasAnalyzerResult<P
         final List<QueryBuilder> queryBuilders = createQueryBuilders(input);
 
         if (queryBuilders.isEmpty()) {
-            result[INDEX_MATCH_STATUS] = MATCH_STATUS_SKIPPED;
+            result[INDEX_MATCH_STATUS] = MATCH_STATUS_NO_MATCH;
             return result;
         }
 
