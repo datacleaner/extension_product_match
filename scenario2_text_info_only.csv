@@ -1,0 +1,12 @@
+employee_id,purchase_id,product,quantity,country
+5000,1000,Fanta 6 pack,1,US
+5000,1000,Mars bar,3,DK
+5000,1001,hovedpinepiller,1,DK
+5000,1002,head ache pills,1,US
+5000,1003,AJAX bicarbonato,1,BR
+5000,1003,Axe Marine compact,5,US
+5001,1004,Acquarius Orange - AQUA,1,DK
+5001,1004,Deodorant 3412241230264,2,US
+5002,1005,AEG T-59840 tumbler,1,US
+5003,1006,Havaianas slippers brazil,2,US
+5004,1007,stop ache pills 50 vegicaps
