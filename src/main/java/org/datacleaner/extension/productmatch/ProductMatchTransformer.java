@@ -186,13 +186,18 @@ public class ProductMatchTransformer implements Transformer, HasAnalyzerResult<P
                         return result;
                     }
                 }
+            }else{
+                if (input.size() == 1){
+                    result[INDEX_MATCH_STATUS] = MATCH_STATUS_NO_MATCH;
+                    return result;
+                }
             }
         }
 
         final List<QueryBuilder> queryBuilders = createQueryBuilders(input);
 
         if (queryBuilders.isEmpty()) {
-            result[INDEX_MATCH_STATUS] = MATCH_STATUS_NO_MATCH;
+            result[INDEX_MATCH_STATUS] = MATCH_STATUS_SKIPPED;
             return result;
         }
 
