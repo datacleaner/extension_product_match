@@ -24,11 +24,14 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.metamodel.elasticsearch.ElasticSearchDataContext;
 import org.datacleaner.api.Categorized;
 import org.datacleaner.api.Configured;
 import org.datacleaner.api.Description;
+import org.datacleaner.api.HasAnalyzerResult;
 import org.datacleaner.api.Initialize;
 import org.datacleaner.api.InputColumn;
 import org.datacleaner.api.InputRow;
@@ -62,7 +65,10 @@ import org.elasticsearch.search.SearchHits;
         + "<li>'NO_MATCH' - No match at all or only very poor matches.</li>"
         + "<li>'SKIPPED' - The record was skipped - typically because there wasn't enough input.</li>" + "</ul>")
 @Categorized(superCategory = ImproveSuperCategory.class, value = ReferenceDataCategory.class)
-public class ProductMatchTransformer implements Transformer {
+public class ProductMatchTransformer implements Transformer, HasAnalyzerResult<ProductMatchResult> {
+    
+    private static final int INDEX_MATCH_STATUS = ProductOutputField.MATCH_STATUS.ordinal();
+    private static final int INDEX_SEGMENT = ProductOutputField.GPC_SEGMENT.ordinal();
 
     public static final String MATCH_STATUS_GOOD = "GOOD_MATCH";
     public static final String MATCH_STATUS_POTENTIAL = "POTENTIAL_MATCH";
@@ -76,10 +82,15 @@ public class ProductMatchTransformer implements Transformer {
     @MappedProperty("Input")
     ProductInputField[] inputMapping;
 
-    ElasticSearchDatastore datastore;
+    private ElasticSearchDatastore datastore;
+    private final ConcurrentHashMap<String, AtomicInteger> _matchStatuses = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AtomicInteger> _segments = new ConcurrentHashMap<>();
 
     @Initialize
     public void init() {
+        _matchStatuses.clear();
+        _segments.clear();
+        
         final String hostname = System.getProperty("org.datacleaner.extension.productmatch.hostname", "productvm");
         final String portString = System.getProperty("org.datacleaner.extension.productmatch.port", "9300");
         final int port = Integer.parseInt(portString);
@@ -104,23 +115,45 @@ public class ProductMatchTransformer implements Transformer {
     @Override
     public Object[] transform(InputRow row) {
         final Map<ProductSearchField, Object> input = createInputMap(row);
+        final Object[] result;
         try (UpdateableDatastoreConnection connection = datastore.openConnection()) {
             final ElasticSearchDataContext dataContext = (ElasticSearchDataContext) connection.getDataContext();
             final Client client = dataContext.getElasticSearchClient();
 
-            return transform(input, client);
+            result = transform(input, client);
         }
+        
+        // update match status map
+        {
+            final String matchStatus = (String) result[INDEX_MATCH_STATUS];
+            final AtomicInteger newCounter = new AtomicInteger(0);
+            final AtomicInteger existingCounter = _matchStatuses.putIfAbsent(matchStatus, newCounter);
+            final AtomicInteger counter = existingCounter == null? newCounter : existingCounter;
+            counter.incrementAndGet();
+        }
+        
+        // update segment status map (only if segment is found)
+        {
+            final String segment = (String) result[INDEX_SEGMENT];
+            if (segment != null) {
+                final AtomicInteger newCounter = new AtomicInteger(0);
+                final AtomicInteger existingCounter = _segments.putIfAbsent(segment, newCounter);
+                final AtomicInteger counter = existingCounter == null? newCounter : existingCounter;
+                counter.incrementAndGet();
+            }
+        }
+        
+        return result;
     }
 
     protected Object[] transform(Map<ProductSearchField, Object> input, Client client) {
         final Object[] result = new Object[ProductOutputField.values().length];
-        final int matchStatusIndex = ProductOutputField.MATCH_STATUS.ordinal();
 
         // ensure that input=output, when no match is found
         applySearchHitToResult(input, result);
 
         if (input.isEmpty()) {
-            result[matchStatusIndex] = MATCH_STATUS_SKIPPED;
+            result[INDEX_MATCH_STATUS] = MATCH_STATUS_SKIPPED;
             return result;
         }
 
@@ -138,7 +171,7 @@ public class ProductMatchTransformer implements Transformer {
                     // this is a lookup-only scenario, everything is good now
                     // then
                     applySearchHitToResult(lookupResult, result);
-                    result[matchStatusIndex] = MATCH_STATUS_GOOD;
+                    result[INDEX_MATCH_STATUS] = MATCH_STATUS_GOOD;
                     return result;
                 } else {
                     // some fields should be compared
@@ -149,7 +182,7 @@ public class ProductMatchTransformer implements Transformer {
                         // OK the lookup seems at least potential - we'll return
                         // this
                         applySearchHitToResult(lookupResult, result);
-                        result[matchStatusIndex] = matchVerdict;
+                        result[INDEX_MATCH_STATUS] = matchVerdict;
                         return result;
                     }
                 }
@@ -159,7 +192,7 @@ public class ProductMatchTransformer implements Transformer {
         final List<QueryBuilder> queryBuilders = createQueryBuilders(input);
 
         if (queryBuilders.isEmpty()) {
-            result[matchStatusIndex] = MATCH_STATUS_SKIPPED;
+            result[INDEX_MATCH_STATUS] = MATCH_STATUS_SKIPPED;
             return result;
         }
 
@@ -179,12 +212,12 @@ public class ProductMatchTransformer implements Transformer {
 
         final Map<ProductSearchField, Object> matchResult = executeSearch(search);
         if (matchResult == null) {
-            result[matchStatusIndex] = MATCH_STATUS_NO_MATCH;
+            result[INDEX_MATCH_STATUS] = MATCH_STATUS_NO_MATCH;
             return result;
         }
 
         final String matchVerdict = getMatchVerdict(input, matchResult);
-        result[matchStatusIndex] = matchVerdict;
+        result[INDEX_MATCH_STATUS] = matchVerdict;
         switch (matchVerdict) {
         case MATCH_STATUS_GOOD:
         case MATCH_STATUS_POTENTIAL:
@@ -331,5 +364,10 @@ public class ProductMatchTransformer implements Transformer {
             }
         }
         return map;
+    }
+
+    @Override
+    public ProductMatchResult getResult() {
+        return new ProductMatchResult(_matchStatuses, _segments);
     }
 }
