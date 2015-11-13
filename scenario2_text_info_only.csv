@@ -9,4 +9,9 @@ employee_id,purchase_id,product,quantity,country
 5001,1004,Deodorant 3412241230264,2,US
 5002,1005,AEG T-59840 tumbler,1,US
 5003,1006,Havaianas slippers brazil,2,US
-5004,1007,stop ache pills 50 vegicaps
+5004,1007,stop ache pills 50 vegicaps,1,US
+5004,1008,Kronenburg kanterbrau biere bouteille 6ct blonde,12,FR
+5002,1009,Surf - Laundry Detergent,1,US
+5002,1010,DSB print selv billet,2,DK
+5005,1011,,1,DK
+5006,1012,Arla Soft White cheese,2,NL
